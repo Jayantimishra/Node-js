@@ -8,9 +8,11 @@
 
 const http = require("http");
 const fs = require("fs");
+const { Transform, pipeline } = require("stream");
 
 const server = http.createServer((req, res) => {
-  // ---------1---------------------------------------
+
+  //* ---------1---------------------------------------
   //  Serving a large file without streams
   //--------------------------------------------------
 
@@ -23,7 +25,7 @@ const server = http.createServer((req, res) => {
   //   fileStream.pipe(res);
   //   res.end();
 
-  // ---------2---------------------------------------
+  //* ---------2---------------------------------------
   // copying a large file
 
   //* Copying in a bad way without streams
@@ -35,14 +37,50 @@ const server = http.createServer((req, res) => {
 
   //* Copying in a good way using streams
 
-  const readStream = fs.createReadStream("sample.txt");
-  const writeStream = fs.createWriteStream("output.txt");
-  readStream.on("data", (chunk) => {
-    console.log("CHANK: ", chunk);
-    writeStream.write(chunk);
-  });
+//   const readStream = fs.createReadStream("sample.txt");
+//   const writeStream = fs.createWriteStream("output.txt");
+//   readStream.on("data", (chunk) => {
+//     console.log("CHANK: ", chunk);
+//     writeStream.write(chunk);
+//   });
+
+//* ---------3---------------------------------------
+// String processing with streams
+//--------------------------------------------------
+
+//upercase transform stream
+// ipsum ---> JM
+
+// right way using Transform stream
+const readStream = fs.createReadStream("sample.txt", { encoding: "utf-8" });
+const writeStream = fs.createWriteStream("output.txt");
+const transformStream = new Transform({
+  transform(chunk, encoding, callback) {
+    const modifiedWord = chunk.toString().toUpperCase().replace(/ipsum/gi, "JM");
+    callback(null, modifiedWord);
+  }
+});
+
+// not right way
+// readStream.on("data", (chunk) => {
+//   const modifiedWord  = chunk.toString().toUpperCase().replace(/ipsum/gi, "JM");
+//   writeStream.write(modifiedWord);
+// });
+
+
+// readStream.pipe(transformStream).pipe(writeStream);
+pipeline(
+  readStream,
+  transformStream,
+  writeStream)
+  res.end();
+
+
+
+
+
 });
 
 server.listen(3080, () => {
   console.log("Server is listening on port 3080");
-});
+})
